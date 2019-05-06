@@ -328,7 +328,7 @@ def test16():
 	trg_field.build_vocab((dataset.trg,), vocab_size=50000)
 
 	# bi = torchtext.BucketIterator(dataset, batch_size=100, sort_key=lambda x: len(x.src), sort=False, shuffle=True, repeat=True)
-	bi = BucketIterator(dataset, batch_size=100, sort_key=lambda x: len(x.src), sort=False, shuffle=True, repeat=True, num_buckets=10)
+	bi = BucketIterator(dataset, batch_size=5, sort_key=lambda x: len(x.src), sort=False, shuffle=True, repeat=True, num_buckets=100)
 
 	bg = bi.__iter__()
 
@@ -343,8 +343,8 @@ def test16():
 		src, src_len = batch.src
 		trg, trg_len = batch.trg
 
-		# print('src_len', src_len, '   trg_len', trg_len)
-		# print('src_len', len(src), '   trg_len', len(trg))
+		print('src_len', src_len, '   trg_len', trg_len)
+		print('src_len', (src), '   trg_len', (trg))
 
 	cal_time('BucketIterator')
 

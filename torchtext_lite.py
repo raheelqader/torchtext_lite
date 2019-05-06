@@ -8,17 +8,6 @@ import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-'''
-from time import time
-last_time = time()
-def cal_time(msg):
-	global last_time
-	current_time = time()
-	seconds_elapsed = current_time - last_time
-	print(msg, ' seconds_elapsed: ', seconds_elapsed)
-	last_time = time()
-'''
-
 UNK_token = '<UNK>'
 PAD_token = '<PAD>'
 SOS_token = '<SOS>'
@@ -218,15 +207,18 @@ class Dataset():
 	def __getitem__(self, i):
 		return self.examples[i]
 
+
 	def __len__(self):
 		try:
 			return len(self.examples)
 		except TypeError:
 			return 2**32
 
+
 	def __iter__(self):
 		for x in self.examples:
 			yield x
+
 
 	def __getattr__(self, attr):
 		for x in self.examples:
@@ -255,8 +247,8 @@ class Batch():
 
 class BucketIterator():
 
-	def __init__(self, dataset, batch_size, sort_key, device=None, 
-				repeat=False, shuffle=None, sort=None, num_buckets=None):
+	def __init__(self, dataset, batch_size, sort_key, device=None, repeat=False, 
+				shuffle=False, sort=False, sort_within_batch=True, num_buckets=None):
 	   
 		self.dataset = dataset
 		self.batch_size = batch_size+1
@@ -265,6 +257,7 @@ class BucketIterator():
 		self.repeat = repeat
 		self.shuffle = shuffle
 		self.sort = sort
+		self.sort_within_batch = sort_within_batch
 		self.num_buckets = num_buckets or self.batch_size*100
 
 		self.iterations = 0
@@ -303,8 +296,17 @@ class BucketIterator():
 			batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size-1]
 			self.cursor[i] += self.batch_size
 
+			if self.sort_within_batch:
+				batch =  sorted(batch, key=self.sort_key, reverse=True)
+				
 			self.batchs.append(Batch(batch, self.dataset, self.device))
 
+
+	def random_shuffler(self):
+		#sorts buckets by sequence length, but keeps it random within the same length
+		for i in range(self.num_buckets):
+			random.shuffle(self.buckets[i])
+			self.cursor[i] = 0
 
 
 	def init_epoch(self):
@@ -325,13 +327,6 @@ class BucketIterator():
 	@property
 	def epoch(self):
 		return math.floor(self.iterations / len(self))
-
-
-	def random_shuffler(self):
-		#sorts buckets by sequence length, but keeps it random within the same length
-		for i in range(self.num_buckets):
-			random.shuffle(self.buckets[i])
-			self.cursor[i] = 0
 
 
 	def __iter__(self):
