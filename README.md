@@ -4,6 +4,8 @@ A light version of torchtext library
 
 ## Sample usage
 ```
+from torchtext_lite import *
+
 src_path = './source.txt'
 trg_path = './target.txt' 
 src_max_length=100
