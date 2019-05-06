@@ -6,8 +6,18 @@ import random
 
 import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = None
 
+
+'''
+from time import time
+last_time = time()
+def cal_time(msg):
+	global last_time
+	current_time = time()
+	seconds_elapsed = current_time - last_time
+	print(msg, ' seconds_elapsed: ', seconds_elapsed)
+	last_time = time()
+'''
 
 UNK_token = '<UNK>'
 PAD_token = '<PAD>'
@@ -243,13 +253,11 @@ class Batch():
 
 
 
-class BucketedDataIterator():
+class BucketIterator():
 
 	def __init__(self, dataset, batch_size, sort_key, device=None, 
-				repeat=False, shuffle=None, sort=None, num_buckets=100):
+				repeat=False, shuffle=None, sort=None, num_buckets=None):
 	   
-		assert num_buckets < len(dataset), 'num_buckets must be smaller than dataset length.'
-
 		self.dataset = dataset
 		self.batch_size = batch_size+1
 		self.sort_key = sort_key
@@ -257,13 +265,17 @@ class BucketedDataIterator():
 		self.repeat = repeat
 		self.shuffle = shuffle
 		self.sort = sort
-		self.num_buckets = num_buckets
-		
+		self.num_buckets = num_buckets or self.batch_size*100
+
 		self.iterations = 0
 		self.epoch_iterations = 0
 
+		self.create_buckets()
+
 
 	def create_buckets(self):
+		
+		if self.num_buckets > len(self.dataset): self.num_buckets = 1
 
 		sorted_dataset = self.dataset.sort(self.sort_key)
 		self.size = math.floor(len(sorted_dataset) / self.num_buckets)
@@ -274,17 +286,37 @@ class BucketedDataIterator():
 		
 		# cursor[i] will be the cursor for the ith bucket
 		self.cursor = np.array([0] * self.num_buckets)
-		self.random_shuffler()
-	
+		
+
+
+	def create_batchs(self):
+
+		self.batchs = []
+
+		for idx in range(len(self.dataset)//self.batch_size):
+
+			if np.any(self.cursor+self.batch_size+1 > self.size):
+				self.random_shuffler()
+
+			i = np.random.randint(0,self.num_buckets)
+
+			batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size-1]
+			self.cursor[i] += self.batch_size
+
+			self.batchs.append(Batch(batch, self.dataset, self.device))
+
+
 
 	def init_epoch(self):
 
-		self.create_buckets()
+		self.random_shuffler()
+		self.create_batchs()
 
 		self.epoch_iterations = 0
 
 		if not self.repeat:
 			self.iterations = 0
+
 
 	def __len__(self):
 		return math.ceil(len(self.dataset) / self.batch_size)
@@ -308,20 +340,12 @@ class BucketedDataIterator():
 
 			self.init_epoch()
 
-			for idx in range(len(self.dataset)//self.batch_size):
+			for batch in self.batchs:
 
 				self.iterations += 1
 				self.epoch_iterations += 1
 
-				if np.any(self.cursor+self.batch_size+1 > self.size):
-					self.random_shuffler()
-
-				i = np.random.randint(0,self.num_buckets)
-
-				batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size-1]
-				self.cursor[i] += self.batch_size
-
-				yield Batch(batch, self.dataset, self.device)
+				yield batch
 			
 			if not self.repeat:
 				return

@@ -1,10 +1,20 @@
-from data_proc import *
+from torchtext_lite import *
+# import torchtext
 
-
-src_path = './devset_mr.txt'
-trg_path = './devset_ref.txt' 
+src_path = './source.txt'
+trg_path = './target.txt' 
 src_max_length=100
 trg_max_length=100
+
+from time import time
+last_time = time()
+def cal_time(msg):
+	global last_time
+	current_time = time()
+	seconds_elapsed = current_time - last_time
+	print(msg, ' seconds_elapsed: ', seconds_elapsed)
+	last_time = time()
+
 
 def test1():
 
@@ -305,30 +315,38 @@ def test15():
 
 def test16():
 
+
+	last_time = time()
+	
+
 	src_field = Field(add_sos=True, add_eos=True)
 	trg_field = Field()
 	src_raw_field = RawField()
 
 	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
-	src_field.build_vocab((dataset.src, dataset.trg), vocab_size=50000, save_path='vocab_file')
-	trg_field.build_vocab((dataset.trg,), vocab_size=50000, save_path='vocab_file')
+	src_field.build_vocab((dataset.src, dataset.trg), vocab_size=50000)
+	trg_field.build_vocab((dataset.trg,), vocab_size=50000)
 
-	bi = BucketedDataIterator(dataset, batch_size=100, sort_key=lambda x: len(x.src), num_buckets=10, repeat=False)
+	# bi = torchtext.BucketIterator(dataset, batch_size=100, sort_key=lambda x: len(x.src), sort=False, shuffle=True, repeat=True)
+	bi = BucketIterator(dataset, batch_size=100, sort_key=lambda x: len(x.src), sort=False, shuffle=True, repeat=True, num_buckets=10)
+
 	bg = bi.__iter__()
 
-	for iter in range(0, 400):
+	for iter in range(0, 1000):
 		batch = next(bg)
 
-		print('bi: ', bi.epoch)
-		print('epoch_iter: ', bi.epoch_iterations)
+		# print('bi: ', bi.epoch)
+		# print('epoch_iter: ', bi.epoch_iterations)
 
 		# batch = batch.sort('trg')
 
 		src, src_len = batch.src
 		trg, trg_len = batch.trg
 
-		print('src_len', src_len, '   trg_len', trg_len)
+		# print('src_len', src_len, '   trg_len', trg_len)
+		# print('src_len', len(src), '   trg_len', len(trg))
 
+	cal_time('BucketIterator')
 
 	'''
 	for batch in bi:
