@@ -1,3 +1,4 @@
+
 # torchtext lite
 A light version of torchtext library
 
@@ -28,4 +29,37 @@ for batch in bi:
 
 	src, src_len = batch.src
 	trg, trg_len = batch.trg
+```
+
+## Save and load vocabulary
+
+```
+src_field.build_vocab(dataset.src, vocab_size=50000, save_path='src_vocab')
+trg_field.build_vocab(dataset.trg, vocab_size=50000, save_path='trg_vocab')
+```
+```
+src_field.build_vocab(dataset.src, vocab_size=50000, load_path='src_vocab')
+trg_field.build_vocab(dataset.trg, vocab_size=50000, load_path='trg_vocab')
+```
+
+## Save and load fields
+```
+src_field.save('src_field')
+trg_field.save('trg_field')
+```
+```
+src_field.load('src_field')
+trg_field.load('trg_field')
+```
+
+## Save and load datasets
+```
+dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
+src_field.build_vocab(dataset.src, vocab_size=50000)
+trg_field.build_vocab(dataset.trg, vocab_size=50000)
+dataset.save('e2e_dataset')
+```
+```
+dataset = Dataset()
+dataset.load('e2e_dataset')
 ```
