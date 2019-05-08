@@ -22,7 +22,7 @@ def tokenizer(text):
 	if split_level == 'char':
 		return [tok for tok in list(text)]
 	elif  split_level == 'word':
-		return [tok for tok in text.split(' ')]
+		return [tok for tok in text.split()]
 
 def detokenizer(tokens):
 	if split_level == 'char':
@@ -35,10 +35,14 @@ class Vocab(object):
 
 	def __init__(self, reserved=[]):
 		self.reserved = [PAD_token, UNK_token] + reserved
-		self.word2index = defaultdict(lambda:self.reserved.index(UNK_token))
+		self.word2index = defaultdict(self._unk_idx)
 		self.word2count = Counter()
 		self.index2word = list()
 		self.embeddings = None
+
+	#returns location of UNK_token
+	def _unk_idx(self):
+		return self.reserved.index(UNK_token)
 
 
 	def add_words(self, words):
@@ -68,7 +72,7 @@ class Vocab(object):
 			for line in fin:
 				line=line.strip()
 				word, freq = line.split('\t')
-				self.word2count[word] = freq
+				self.word2count[word] = int(freq)
 
 	def save(self, file_name):
 		with open(file_name, 'w') as fout:
@@ -182,14 +186,16 @@ class Dataset():
 		if examples: self.examples = examples
 		if fields: self.fields = dict(fields)
 
-	def save(self, dataset_file):
-		with open(dataset_file, 'wb') as fout:
-			pickle.dump(self.examples, fout)
+	def save(self, file_name):
+		with open(file_name, 'wb') as fout:
+			dataset = {'examples':self.examples, 'fields':self.fields}
+			pickle.dump(dataset, fout)
 
-	def load(self, dataset_file, fields):
-		with open(dataset_file, 'rb') as fin:
-			self.examples = pickle.load(fin)
-		self.fields = dict(fields)
+	def load(self, file_name):
+		with open(file_name, 'rb') as fin:
+			dataset = pickle.load(fin)
+		self.examples = dataset['examples']
+		self.fields = dataset['fields']
 
 	def sort(self, sort_key, reverse=False):
 		sorted_examples = sorted(self.examples, key=sort_key, reverse=reverse)
