@@ -1,5 +1,7 @@
 from torchtext_lite import *
 # import torchtext
+import sys
+
 
 src_path = './source.txt'
 trg_path = './target.txt' 
@@ -362,4 +364,41 @@ def test16():
 		print('src_len', src_len, '   trg_len', trg_len)
 	'''
 
-test16()		
+
+
+def test17():
+
+	last_time = time()
+
+	src_field = Field(add_sos=True, add_eos=True)
+	trg_field = Field()
+	src_raw_field = RawField()
+
+	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
+	src_field.build_vocab([dataset.src, dataset.trg], vocab_size=50000)
+	trg_field.build_vocab(dataset.trg, vocab_size=50000)
+
+	bi = BucketIterator(dataset, batch_size=10, sort_key=lambda x: len(x.src), sort=False, shuffle=True, repeat=True, sort_within_batch=False)
+
+	bg = bi.__iter__()
+
+	for iter in range(0, 1):
+		batch = next(bg)
+
+		src, src_len = batch.src
+		trg, trg_len = batch.trg
+
+		print('src_len', src_len, '   trg_len', trg_len)
+		
+		batch.sort(sort_key=lambda x: len(x.src) , reverse=True)
+		src, src_len = batch.src
+		trg, trg_len = batch.trg
+		
+		print('src_len', src_len, '   trg_len', trg_len)
+		print('src', src, '   trg', trg)
+
+
+
+	cal_time('BucketIterator')
+
+test17()		

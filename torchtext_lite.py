@@ -3,6 +3,8 @@ from collections import Counter
 import math
 import numpy as np
 import random
+from collections import defaultdict 
+import warnings
 
 import torch
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -32,9 +34,9 @@ def detokenizer(tokens):
 class Vocab(object):
 
 	def __init__(self, reserved=[]):
-		self.word2index = {}
-		self.word2count = Counter()
 		self.reserved = [PAD_token, UNK_token] + reserved
+		self.word2index = defaultdict(lambda:self.reserved.index(UNK_token))
+		self.word2count = Counter()
 		self.index2word = list()
 		self.embeddings = None
 
@@ -61,14 +63,12 @@ class Vocab(object):
 			self.word2count[word] = freq
 			self.index2word.append(word)
 
-
 	def load(self, file_name):
 		with open(file_name, 'r') as fin:
 			for line in fin:
 				line=line.strip()
 				word, freq = line.split('\t')
 				self.word2count[word] = freq
-
 
 	def save(self, file_name):
 		with open(file_name, 'w') as fout:
@@ -82,9 +82,8 @@ class RawField():
 	def preprocess(self, text):
 		return text
 
-	def process(self, batch, device=None):
+	def process(self, batch, device):
 		return batch
-
 
 	def save(self, file_name):
 		with open(file_name, 'wb') as fout:
@@ -108,30 +107,25 @@ class Field(RawField):
 		self.add_eos = add_eos
 		self.tokenizer = tokenizer
 
-
 	def preprocess(self, text):
 		return self.tokenizer(text)
 
-
-	def process(self, batch, device=None):
+	def process(self, batch, device):
 		padded, lengths = self.pad(batch)
 		idx = self.numericalize(padded)
 		tensor, lengths = self.to_tensor(idx, lengths, device)
 		return tensor, lengths
 		# return idx, lengths
 
-
 	def numericalize(self, padded):
 		idx = [[self.vocab.word2index[tok] for tok in ex] for ex in padded]
 		return idx
-
 
 	def to_tensor(self, idx, lengths, device):
 		lengths = torch.tensor(lengths, dtype=torch.long, device=device)
 		tensor = torch.tensor(idx, dtype=torch.long, device=device)
 		tensor = tensor.contiguous()
 		return tensor, lengths
-
 
 	def pad(self, batch):
 		max_len = max(len(x) for x in batch)
@@ -148,7 +142,6 @@ class Field(RawField):
 
 		return (padded, lengths)
 
-
 	def build_vocab(self, datasets, vocab_size=None, min_freq=1, load_path=None, save_path=None):
 
 		reserved = []
@@ -160,6 +153,8 @@ class Field(RawField):
 		if load_path:
 			self.vocab.load(load_path)
 		else:
+			if not isinstance(datasets, list): datasets = [datasets]
+			
 			for dataset in datasets:
 				for example in dataset:
 					self.vocab.add_words(example)
@@ -187,26 +182,21 @@ class Dataset():
 		if examples: self.examples = examples
 		if fields: self.fields = dict(fields)
 
-
 	def save(self, dataset_file):
 		with open(dataset_file, 'wb') as fout:
 			pickle.dump(self.examples, fout)
-
 
 	def load(self, dataset_file, fields):
 		with open(dataset_file, 'rb') as fin:
 			self.examples = pickle.load(fin)
 		self.fields = dict(fields)
 
-
-	def sort(self, sort_key):
-		sorted_examples = sorted(self.examples, key=sort_key)
+	def sort(self, sort_key, reverse=False):
+		sorted_examples = sorted(self.examples, key=sort_key, reverse=reverse)
 		return sorted_examples
-
 
 	def __getitem__(self, i):
 		return self.examples[i]
-
 
 	def __len__(self):
 		try:
@@ -214,11 +204,9 @@ class Dataset():
 		except TypeError:
 			return 2**32
 
-
 	def __iter__(self):
 		for x in self.examples:
 			yield x
-
 
 	def __getattr__(self, attr):
 		for x in self.examples:
@@ -229,19 +217,24 @@ class Dataset():
 
 class Batch():
 
-	def __init__(self, data=None, dataset=None, device=None):
-
+	def __init__(self, data, dataset, device):
+		self.data = data
 		self.batch_size = len(data)
 		self.fields = dataset.fields
+		self.prepare_batch(data)
 
+	def prepare_batch(self, data):
 		for (name, field) in self.fields.items():
 			if field is not None:
 				batch = [getattr(x, name) for x in data]
 				setattr(self, name, field.process(batch, device))
 
+	def sort(self, sort_key, reverse=False):
+		sorted_data = sorted(self.data, key=sort_key, reverse=reverse)
+		self.prepare_batch(sorted_data)
+
 	def __len__(self):
 		return self.batch_size
-
 
 
 
@@ -251,14 +244,14 @@ class BucketIterator():
 				shuffle=False, sort=False, sort_within_batch=True, num_buckets=None):
 	   
 		self.dataset = dataset
-		self.batch_size = batch_size+1
+		self.batch_size = batch_size
 		self.sort_key = sort_key
 		self.device = device
 		self.repeat = repeat
 		self.shuffle = shuffle
 		self.sort = sort
 		self.sort_within_batch = sort_within_batch
-		self.num_buckets = num_buckets or self.batch_size*100
+		self.num_buckets = num_buckets or max(len(self.dataset)//(self.batch_size*100), 1)
 
 		self.iterations = 0
 		self.epoch_iterations = 0
@@ -268,14 +261,16 @@ class BucketIterator():
 
 	def create_buckets(self):
 		
-		if self.num_buckets > len(self.dataset): self.num_buckets = 1
+		if (len(self.dataset)//self.num_buckets) < self.batch_size:
+			self.num_buckets = 1
+			warnings.warn("num_buckets is set 1 as the provided num_buckets is larger than the batch_size.")
 
 		sorted_dataset = self.dataset.sort(self.sort_key)
 		self.size = math.floor(len(sorted_dataset) / self.num_buckets)
 		self.buckets = []
-		
+
 		for bucket in range(self.num_buckets):
-			self.buckets.append(sorted_dataset[bucket*self.size: (bucket+1)*self.size - 1])
+			self.buckets.append(sorted_dataset[bucket*self.size: (bucket+1)*self.size])
 		
 		# cursor[i] will be the cursor for the ith bucket
 		self.cursor = np.array([0] * self.num_buckets)
@@ -293,11 +288,11 @@ class BucketIterator():
 
 			i = np.random.randint(0,self.num_buckets)
 
-			batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size-1]
+			batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size]
 			self.cursor[i] += self.batch_size
 
 			if self.sort_within_batch:
-				batch =  sorted(batch, key=self.sort_key, reverse=True)
+				batch.sort(key=self.sort_key, reverse=True)
 				
 			self.batchs.append(Batch(batch, self.dataset, self.device))
 
