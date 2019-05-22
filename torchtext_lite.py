@@ -229,8 +229,7 @@ class Dataset():
 		self.fields = dataset['fields']
 
 	def sort(self, sort_key, reverse=False):
-		sorted_examples = sorted(self.examples, key=sort_key, reverse=reverse)
-		return sorted_examples
+		self.examples = sorted(self.examples, key=sort_key, reverse=reverse)
 
 	def __getitem__(self, i):
 		return self.examples[i]
@@ -259,17 +258,17 @@ class Batch():
 		self.batch_size = len(data)
 		self.fields = dataset.fields
 		self.device = device
-		self.prepare_batch(data)
+		self.prepare_batch()
 
-	def prepare_batch(self, data):
+	def prepare_batch(self):
 		for (name, field) in self.fields.items():
 			if field is not None:
-				batch = [getattr(x, name) for x in data]
+				batch = [getattr(x, name) for x in self.data]
 				setattr(self, name, field.process(batch, self.device))
 
 	def sort(self, sort_key, reverse=False):
-		sorted_data = sorted(self.data, key=sort_key, reverse=reverse)
-		self.prepare_batch(sorted_data)
+		self.data = sorted(self.data, key=sort_key, reverse=reverse)
+		self.prepare_batch()
 
 	def __len__(self):
 		return self.batch_size
@@ -280,7 +279,7 @@ class BucketIterator():
 
 	def __init__(self, dataset, batch_size, sort_key, device=None, repeat=False, 
 				shuffle=False, sort=False, sort_within_batch=True, num_buckets=None):
-	   
+
 		self.dataset = dataset
 		self.batch_size = batch_size
 		self.sort_key = sort_key
@@ -304,9 +303,9 @@ class BucketIterator():
 			warnings.warn("num_buckets is set to 1 as the provided num_buckets is larger than the batch_size.")
 
 		if self.sort:
-			self.dataset = self.dataset.sort(self.sort_key)
+			self.dataset.sort(self.sort_key)
 
-		self.size = math.floor(len(self.dataset) / self.num_buckets)
+		self.size = math.ceil(len(self.dataset) / self.num_buckets)
 		self.buckets = []
 
 		for bucket in range(self.num_buckets):
