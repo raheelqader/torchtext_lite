@@ -334,9 +334,6 @@ class BucketIterator():
 				batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size]
 				self.cursor[i] += self.batch_size
 
-				if self.sort_within_batch:
-					batch.sort(key=self.sort_key, reverse=True)
-					
 				yield Batch(batch, self.dataset, self.device)
 		else:
 			batch = []
@@ -385,6 +382,9 @@ class BucketIterator():
 
 				self.iterations += 1
 				self.epoch_iterations += 1
+
+				if self.sort_within_batch:
+					batch.sort(sort_key=self.sort_key, reverse=True)
 
 				yield batch
 			
