@@ -7,6 +7,7 @@ from collections import defaultdict
 import warnings
 import json
 import os
+from itertools import chain
 
 import torch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -302,50 +303,63 @@ class BucketIterator():
 			self.num_buckets = 1
 			warnings.warn("num_buckets is set to 1 as the provided num_buckets is larger than the batch_size.")
 
-		sorted_dataset = self.dataset.sort(self.sort_key)
-		self.size = math.floor(len(sorted_dataset) / self.num_buckets)
+		if self.sort:
+			self.dataset = self.dataset.sort(self.sort_key)
+
+		self.size = math.floor(len(self.dataset) / self.num_buckets)
 		self.buckets = []
 
 		for bucket in range(self.num_buckets):
-			self.buckets.append(sorted_dataset[bucket*self.size: (bucket+1)*self.size])
+			self.buckets.append(self.dataset[bucket*self.size: (bucket+1)*self.size])
 		
 		# cursor[i] will be the cursor for the ith bucket
 		self.cursor = np.array([0] * self.num_buckets)
 		
 
+	@property
+	def batches(self):
+		"""
+		if dataset is sorted, prepare batches from random buckets
+		otherwise iterate over the buckets sequentially to prepare batches
+		"""
+		if self.sort:
 
-	def create_batchs(self):
+			for idx in range(len(self.dataset)//self.batch_size):
 
-		self.batchs = []
+				if np.any(self.cursor+self.batch_size+1 > self.size):
+					self.random_shuffler()
 
-		for idx in range(len(self.dataset)//self.batch_size):
+				i = np.random.randint(0,self.num_buckets)
 
-			if np.any(self.cursor+self.batch_size+1 > self.size):
-				self.random_shuffler()
+				batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size]
+				self.cursor[i] += self.batch_size
 
-			i = np.random.randint(0,self.num_buckets)
-
-			batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size]
-			self.cursor[i] += self.batch_size
-
-			if self.sort_within_batch:
-				batch.sort(key=self.sort_key, reverse=True)
-				
-			self.batchs.append(Batch(batch, self.dataset, self.device))
+				if self.sort_within_batch:
+					batch.sort(key=self.sort_key, reverse=True)
+					
+				yield Batch(batch, self.dataset, self.device)
+		else:
+			batch = []
+			for item in chain(*self.buckets):
+				batch.append(item)
+				if len(batch) == self.batch_size:
+					yield Batch(batch, self.dataset, self.device)
+					batch = []
+			if batch:
+				yield Batch(batch, self.dataset, self.device)
 
 
 	def random_shuffler(self):
 		#sorts buckets by sequence length, but keeps it random within the same length
 		for i in range(self.num_buckets):
-			random.shuffle(self.buckets[i])
+			if self.shuffle:
+				random.shuffle(self.buckets[i])
 			self.cursor[i] = 0
 
 
 	def init_epoch(self):
 
 		self.random_shuffler()
-		self.create_batchs()
-
 		self.epoch_iterations = 0
 
 		if not self.repeat:
@@ -367,7 +381,7 @@ class BucketIterator():
 
 			self.init_epoch()
 
-			for batch in self.batchs:
+			for batch in self.batches:
 
 				self.iterations += 1
 				self.epoch_iterations += 1

@@ -5,8 +5,8 @@ import sys
 
 src_path = './source.txt'
 trg_path = './target.txt' 
-src_max_length=100
-trg_max_length=100
+src_max_length=200
+trg_max_length=200
 
 from time import time
 last_time = time()
@@ -37,15 +37,15 @@ def test2():
 
 
 def test3():
-	src_field = Field()
-	trg_field = Field()
+	src_field = TextField()
+	trg_field = TextField()
 	dataset = TextDataset(src_field, trg_field, src_path, trg_path, src_max_length, trg_max_length)
 	src_field.build_vocab((dataset.src,dataset.trg), save_path='vocab_file')
 	dataset.save('dataset')
 
 def test4():
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 	dataset = TextDataset(src_field, trg_field, src_path, trg_path, src_max_length, trg_max_length)
 	src_field.build_vocab((dataset.src,dataset.trg), vocab_size=50000, save_path='vocab_file')
 	dataset.save('dataset')
@@ -64,8 +64,8 @@ def test4():
 
 
 def test5():
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 
 	dataset = TextDataset((src_field, trg_field), src_path, trg_path, src_max_length, trg_max_length)
 	src_field.build_vocab((dataset.src, dataset.trg), vocab_size=50000, save_path='vocab_file')
@@ -87,8 +87,8 @@ def test5():
 
 def test6():
 
-	src_field = Field()
-	trg_field = Field()
+	src_field = TextField()
+	trg_field = TextField()
 	fields = [('src', src_field), ('trg', trg_field)]
 
 	dataset = Dataset()
@@ -111,8 +111,8 @@ def test6():
 
 def test7():
 
-	src_field = Field()
-	trg_field = Field()
+	src_field = TextField()
+	trg_field = TextField()
 	fields = [('src', src_field), ('trg', trg_field)]
 
 	dataset = Dataset()
@@ -133,8 +133,8 @@ def test7():
 
 
 def test8():
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 
 	dataset = TextDataset((src_field, trg_field), src_path, trg_path, src_max_length, trg_max_length)
 	src_field.build_vocab((dataset.src, dataset.trg), vocab_size=50000, save_path='vocab_file')
@@ -155,8 +155,8 @@ def test9():
 	def tokenizer(text):
 		return text.split('al')
 		
-	src_field = Field(add_sos=True, add_eos=True, tokenizer=tokenizer)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True, tokenizer=tokenizer)
+	trg_field = TextField()
 
 	dataset = TextDataset((src_field, trg_field), src_path, trg_path, src_max_length, trg_max_length)
 	src_field.build_vocab((dataset.src, dataset.trg), vocab_size=50000, save_path='vocab_file')
@@ -175,8 +175,8 @@ def test9():
 
 def test10():
 
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 	src_raw_field = RawField()
 
 	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
@@ -195,8 +195,8 @@ def test10():
 
 def test11():
 
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 	src_raw_field = RawField()
 
 	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
@@ -217,8 +217,8 @@ def test11():
 
 
 def test12():
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 	src_raw_field = RawField()
 
 	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
@@ -241,8 +241,8 @@ def test12():
 
 
 def test13():
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 	src_raw_field = RawField()
 
 	fields = [('src', src_field), ('trg', trg_field), ('src_raw', src_raw_field)]
@@ -268,8 +268,8 @@ def test13():
 
 def test14():
 
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 	src_raw_field = RawField()
 
 	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
@@ -292,8 +292,8 @@ def test14():
 
 def test15():
 
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 	src_raw_field = RawField()
 
 	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
@@ -321,8 +321,8 @@ def test16():
 	last_time = time()
 	
 
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 	src_raw_field = RawField()
 
 	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
@@ -345,8 +345,8 @@ def test16():
 		src, src_len = batch.src
 		trg, trg_len = batch.trg
 
-		print('src_len', src_len, '   trg_len', trg_len)
-		print('src_len', (src), '   trg_len', (trg))
+		print('src_len', src_len, '	trg_len', trg_len)
+		print('src_len', (src), '	trg_len', (trg))
 
 	cal_time('BucketIterator')
 
@@ -361,7 +361,7 @@ def test16():
 		src, src_len = batch.src
 		trg, trg_len = batch.trg
 
-		print('src_len', src_len, '   trg_len', trg_len)
+		print('src_len', src_len, '	trg_len', trg_len)
 	'''
 
 
@@ -370,8 +370,8 @@ def test17():
 
 	last_time = time()
 
-	src_field = Field(add_sos=True, add_eos=True)
-	trg_field = Field()
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
 	src_raw_field = RawField()
 
 	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
@@ -388,17 +388,58 @@ def test17():
 		src, src_len = batch.src
 		trg, trg_len = batch.trg
 
-		print('src_len', src_len, '   trg_len', trg_len)
+		print('src_len', src_len, '	trg_len', trg_len)
 		
 		batch.sort(sort_key=lambda x: len(x.src) , reverse=True)
 		src, src_len = batch.src
 		trg, trg_len = batch.trg
 		
-		print('src_len', src_len, '   trg_len', trg_len)
-		print('src', src, '   trg', trg)
+		print('src_len', src_len, '	trg_len', trg_len)
+		print('src', src, '	trg', trg)
 
 
 
 	cal_time('BucketIterator')
 
-test17()		
+import math
+
+def convert_size(size_bytes):
+	if size_bytes == 0:
+		 return "0B"
+	size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+	i = int(math.floor(math.log(size_bytes, 1024)))
+	p = math.pow(1024, i)
+	s = round(size_bytes / p, 2)
+	return "%s %s" % (s, size_name[i])
+
+def test18():
+
+	import os
+	import psutil
+	process = psutil.Process(os.getpid())
+
+	last_time = time()
+
+	src_field = TextField(add_sos=True, add_eos=True)
+	trg_field = TextField()
+	src_raw_field = RawField()
+
+	dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
+	src_field.build_vocab([dataset.src], vocab_size=50000)
+	trg_field.build_vocab(dataset.trg, vocab_size=50000)
+
+	bi = BucketIterator(dataset, batch_size=10, sort_key=lambda x: len(x.src), \
+						sort=False, shuffle=False, repeat=False, sort_within_batch=False, num_buckets=1)
+
+	for batch in bi:
+
+		src_raws = batch.src_raw
+
+		for src_raw in src_raws:
+			print(src_raw)
+
+	# cal_time('nosort')
+	# print(convert_size(process.memory_info().rss))  # in bytes 
+
+
+test18()		
