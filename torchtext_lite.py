@@ -5,9 +5,11 @@ import numpy as np
 import random
 from collections import defaultdict 
 import warnings
+import json
+import os
 
 import torch
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 UNK_token = '<UNK>'
@@ -16,7 +18,7 @@ SOS_token = '<SOS>'
 EOS_token = '<EOS>'
 
 
-split_level = 'word' # char, word
+split_level = 'char' # char, word
 
 def tokenizer(text):
 	if split_level == 'char':
@@ -81,10 +83,11 @@ class Vocab(object):
 				fout.write('{}\t{}\n'.format(word, freq))
 
 
+
 class RawField():
 	
-	def preprocess(self, text):
-		return text
+	def preprocess(self, data):
+		return data
 
 	def process(self, batch, device):
 		return batch
@@ -98,13 +101,41 @@ class RawField():
 			self.__dict__.update(pickle.load(fin).__dict__)
 
 
+class AudioField(RawField):
 
-class TokenizedField(RawField):
-	def preprocess(self, text):
-		return tokenizer(text)
+	def process(self, batch, device):
+		padded, lengths = self.zero_pad(batch)
+		tensor, lengths = self.to_tensor(padded, lengths, device)
+		return tensor, lengths
+
+	def to_tensor(self, batch, lengths, device):
+		lengths = torch.tensor(lengths, dtype=torch.long, device=device)
+		tensor = torch.tensor(batch, dtype=torch.float, device=device)
+		tensor = tensor.contiguous()
+		return tensor, lengths
+
+	def zero_pad(self, batch):
+		max_len = max(len(x) for x in batch)
+		padded, lengths = [], []
+		pad_token = np.zeros_like(batch[-1][-1])
+
+		for x in batch:
+			padding_length = max(0, max_len - len(x))
+			padded.append(np.concatenate((x, np.tile(pad_token, (padding_length, 1))), axis=0))
+			lengths.append(len(padded[-1]) - max(0, max_len - len(x)))
+
+		return (padded, lengths)
+
+	def save(self, file_name):
+		with open(file_name, 'wb') as fout:
+			pickle.dump(self, fout)
+
+	def load(self, file_name):
+		with open(file_name, 'rb') as fin:
+			self.__dict__.update(pickle.load(fin).__dict__)
 
 
-class Field(RawField):
+class TextField(RawField):
 
 	def __init__(self, add_sos=False, add_eos=False, tokenizer=tokenizer):
 		self.add_sos = add_sos
@@ -119,7 +150,6 @@ class Field(RawField):
 		idx = self.numericalize(padded)
 		tensor, lengths = self.to_tensor(idx, lengths, device)
 		return tensor, lengths
-		# return idx, lengths
 
 	def numericalize(self, padded):
 		idx = [[self.vocab.word2index[tok] for tok in ex] for ex in padded]
@@ -378,3 +408,30 @@ class TextDataset(Dataset):
 
 		super(TextDataset, self).__init__(examples, fields)
 
+
+
+
+class ASRDataset(Dataset):
+
+
+	def __init__(self, fields, base_path, data_path):
+
+		fields = [('speech', fields[0]), ('text', fields[1]), ('src_text', fields[2]), ('trg_text', fields[3])]
+
+		examples = []
+
+		with open(data_path, encoding='utf-8') as data_file:
+			for line_i, data_line in enumerate(data_file):
+				json_data = json.loads(data_line)
+				
+				text = json_data["text"]
+
+				audio = os.path.join(base_path, json_data["audio"])
+				mfcc = np.load(audio.replace('.wav', '.npy'))
+
+				print('Reading line #: ', line_i, end='\r')
+
+				if text != '' and mfcc is not None:
+					examples.append(Example([mfcc, text, text, text], fields))
+
+		super(ASRDataset, self).__init__(examples, fields)
