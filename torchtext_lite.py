@@ -71,14 +71,14 @@ class Vocab(object):
 			self.index2word.append(word)
 
 	def load(self, file_name):
-		with open(file_name, 'r') as fin:
+		with open(file_name, 'r', encoding='utf-8') as fin:
 			for line in fin:
-				line=line.strip()
+				line=line.strip('\n')
 				word, freq = line.split('\t')
 				self.word2count[word] = int(freq)
 
 	def save(self, file_name):
-		with open(file_name, 'w') as fout:
+		with open(file_name, 'w', encoding='utf-8') as fout:
 
 			for word, freq in self.word2count.most_common():
 				fout.write('{}\t{}\n'.format(word, freq))
@@ -127,13 +127,6 @@ class AudioField(RawField):
 
 		return (padded, lengths)
 
-	def save(self, file_name):
-		with open(file_name, 'wb') as fout:
-			pickle.dump(self, fout)
-
-	def load(self, file_name):
-		with open(file_name, 'rb') as fin:
-			self.__dict__.update(pickle.load(fin).__dict__)
 
 
 class TextField(RawField):
@@ -177,7 +170,7 @@ class TextField(RawField):
 
 		return (padded, lengths)
 
-	def build_vocab(self, datasets, vocab_size=None, min_freq=1, load_path=None, save_path=None):
+	def build_vocab(self, datasets=None, vocab_size=None, min_freq=1, load_path=None, save_path=None):
 
 		reserved = []
 		if self.add_sos: reserved.append(SOS_token)
