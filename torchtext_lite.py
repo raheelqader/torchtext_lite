@@ -253,10 +253,10 @@ class Dataset():
 
 class Batch():
 
-	def __init__(self, data, dataset, device):
+	def __init__(self, data, fields, device):
 		self.data = data
 		self.batch_size = len(data)
-		self.fields = dataset.fields
+		self.fields = fields
 		self.device = device
 		self.prepare_batch()
 
@@ -333,16 +333,16 @@ class BucketIterator():
 				batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size]
 				self.cursor[i] += self.batch_size
 
-				yield Batch(batch, self.dataset, self.device)
+				yield Batch(batch, self.dataset.fields, self.device)
 		else:
 			batch = []
 			for item in chain(*self.buckets):
 				batch.append(item)
 				if len(batch) == self.batch_size:
-					yield Batch(batch, self.dataset, self.device)
+					yield Batch(batch, self.dataset.fields, self.device)
 					batch = []
 			if batch:
-				yield Batch(batch, self.dataset, self.device)
+				yield Batch(batch, self.dataset.fields, self.device)
 
 
 	def random_shuffler(self):
