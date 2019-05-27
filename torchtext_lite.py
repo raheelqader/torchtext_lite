@@ -1,7 +1,6 @@
 import pickle
 from collections import Counter
 import math
-import numpy as np
 import random
 from collections import defaultdict 
 import warnings
@@ -9,6 +8,7 @@ import json
 import os
 from itertools import chain
 
+import numpy as np
 import torch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -19,7 +19,7 @@ SOS_token = '<SOS>'
 EOS_token = '<EOS>'
 
 
-split_level = 'char' # char, word
+split_level = 'word' # char, word
 
 def tokenizer(text):
 	if split_level == 'char':
@@ -42,6 +42,40 @@ class Vocab(object):
 		self.word2count = Counter()
 		self.index2word = list()
 		self.embeddings = None
+
+
+	def load_embeddings(self, file_name, dtype=np.float32):
+
+		def to_tensor(embeddings):
+			embeddings = torch.from_numpy(embeddings)
+			return embeddings
+
+		vocab_size = len(self)
+		
+		with open(file_name, 'r') as f:
+			for line in f:
+				
+				entries = line.rstrip().split(' ')
+				word, entries = entries[0], entries[1:]
+				word_idx = self.word2index.get(word)
+
+				if word_idx is not None:
+					vector = np.array(entries, dtype=dtype)
+					
+					if self.embeddings is None:
+						n_dims = len(vector)
+						self.embeddings = np.random.normal(np.zeros((vocab_size, n_dims))).astype(dtype)
+						self.embeddings[self.index2word.index(PAD_token)] = np.zeros(n_dims)
+					
+					self.embeddings[word_idx] = vector
+		
+		self.embeddings = to_tensor(self.embeddings)
+		return self.embeddings
+
+
+	def __len__(self):
+		return len(self.index2word)
+
 
 	#returns location of UNK_token
 	def _unk_idx(self):
@@ -70,15 +104,16 @@ class Vocab(object):
 			self.word2count[word] = freq
 			self.index2word.append(word)
 
+
 	def load(self, file_name):
-		with open(file_name, 'r', encoding='utf-8') as fin:
+		with open(file_name, 'r') as fin:
 			for line in fin:
-				line=line.strip('\n')
+				line=line.strip()
 				word, freq = line.split('\t')
 				self.word2count[word] = int(freq)
 
 	def save(self, file_name):
-		with open(file_name, 'w', encoding='utf-8') as fout:
+		with open(file_name, 'w') as fout:
 
 			for word, freq in self.word2count.most_common():
 				fout.write('{}\t{}\n'.format(word, freq))
@@ -127,6 +162,13 @@ class AudioField(RawField):
 
 		return (padded, lengths)
 
+	def save(self, file_name):
+		with open(file_name, 'wb') as fout:
+			pickle.dump(self, fout)
+
+	def load(self, file_name):
+		with open(file_name, 'rb') as fin:
+			self.__dict__.update(pickle.load(fin).__dict__)
 
 
 class TextField(RawField):
@@ -170,7 +212,7 @@ class TextField(RawField):
 
 		return (padded, lengths)
 
-	def build_vocab(self, datasets=None, vocab_size=None, min_freq=1, load_path=None, save_path=None):
+	def build_vocab(self, datasets, vocab_size=None, min_freq=1, load_path=None, save_path=None):
 
 		reserved = []
 		if self.add_sos: reserved.append(SOS_token)
@@ -246,10 +288,10 @@ class Dataset():
 
 class Batch():
 
-	def __init__(self, data, fields, device):
+	def __init__(self, data, dataset, device):
 		self.data = data
 		self.batch_size = len(data)
-		self.fields = fields
+		self.fields = dataset.fields
 		self.device = device
 		self.prepare_batch()
 
@@ -326,16 +368,16 @@ class BucketIterator():
 				batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size]
 				self.cursor[i] += self.batch_size
 
-				yield Batch(batch, self.dataset.fields, self.device)
+				yield Batch(batch, self.dataset, self.device)
 		else:
 			batch = []
 			for item in chain(*self.buckets):
 				batch.append(item)
 				if len(batch) == self.batch_size:
-					yield Batch(batch, self.dataset.fields, self.device)
+					yield Batch(batch, self.dataset, self.device)
 					batch = []
 			if batch:
-				yield Batch(batch, self.dataset.fields, self.device)
+				yield Batch(batch, self.dataset, self.device)
 
 
 	def random_shuffler(self):
