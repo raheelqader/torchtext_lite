@@ -12,8 +12,8 @@ trg_path = './target.txt'
 src_max_length=100
 trg_max_length=100
 
-src_field = Field(add_sos=True, add_eos=True)
-trg_field = Field()
+src_field = TextField(add_sos=True, add_eos=True)
+trg_field = TextField()
 src_raw_field = RawField()
 
 dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
@@ -44,8 +44,8 @@ trg_field.build_vocab(dataset.trg, vocab_size=50000, load_path='trg_vocab')
 
 ## Save and load fields
 ```
-src_field = Field()
-trg_field = Field()
+src_field = TextField()
+trg_field = TextField()
 
 dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
 src_field.build_vocab(dataset.src, vocab_size=50000)
@@ -55,8 +55,8 @@ src_field.save('src_field')
 trg_field.save('trg_field')
 ```
 ```
-src_field = Field()
-trg_field = Field()
+src_field = TextField()
+trg_field = TextField()
 
 src_field.load('src_field')
 trg_field.load('trg_field')
