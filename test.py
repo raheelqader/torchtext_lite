@@ -541,7 +541,31 @@ class TestAll(unittest.TestCase):
 		print(trg_field.vocab.embeddings)
 
 
+
+	def test22(self):
+
+		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+		src_field = BertField(device)
+		trg_field = TextField()
+		src_raw_field = RawField()
+
+		dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
+		trg_field.build_vocab(dataset.trg, vocab_size=50000)
+
+		bi = BucketIterator(dataset, batch_size=10, sort_key=lambda x: len(x.src), \
+							sort=False, shuffle=False, repeat=False, sort_within_batch=False, num_buckets=1, device=device)
+
+		for batch in bi:
+
+			src = batch.src
+
+			for src_seq in src:
+				print(src_seq)
+
+
 if __name__ == '__main__':
-	unittest.main()
-	# test = TestAll()
-	# test.test21()
+	# unittest.main()
+	test = TestAll()
+	test.test22()

@@ -171,6 +171,64 @@ class AudioField(RawField):
 			self.__dict__.update(pickle.load(fin).__dict__)
 
 
+
+class BertField(RawField):
+	def __init__(self, device):
+		from pytorch_pretrained_bert import BertTokenizer, BertModel
+
+		self.pad_token = 0
+		self.cls_token = '[CLS]'
+		self.sep_token = '[SEP]'
+		self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+		self.bert_model = BertModel.from_pretrained('bert-base-uncased')
+		self.bert_model.to(device)
+
+
+	def preprocess(self, text):
+		tokens = [self.cls_token] + self.tokenizer.tokenize(text) + [self.sep_token]
+		idx = self.numericalize(tokens)
+		return idx
+
+
+	def process(self, batch, device):
+		padded, lengths = self.pad(batch)
+		tensor, lengths = self.to_tensor(padded, lengths, device)
+		bert_embeddings = self.bertify(tensor)
+		return bert_embeddings, lengths
+
+
+	def numericalize(self, tokens):
+		idx = self.tokenizer.convert_tokens_to_ids(tokens)
+		return idx
+	
+
+	def pad(self, batch):
+		max_len = max(len(x) for x in batch)
+		padded, lengths = [], []
+		
+		for x in batch:
+			padded.append(
+				list(x[:max_len]) +
+				[self.pad_token] * max(0, max_len - len(x)))
+
+			lengths.append(len(padded[-1]) - max(0, max_len - len(x)))
+
+		return (padded, lengths)
+
+
+	def to_tensor(self, padded, lengths, device):
+		lengths = torch.tensor(lengths, dtype=torch.long, device=device)
+		tensor = torch.tensor(padded, dtype=torch.long, device=device)
+		tensor = tensor.contiguous()
+		return tensor, lengths
+
+
+	def bertify(self, tensor):
+		self.bert_model.eval()
+		encoded_layers, _ = self.bert_model(tensor)
+		return encoded_layers[-1]
+
+
 class TextField(RawField):
 
 	def __init__(self, add_sos=False, add_eos=False, tokenizer=tokenizer):
