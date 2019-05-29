@@ -186,12 +186,12 @@ class BertField(RawField):
 
 	def preprocess(self, text):
 		tokens = [self.cls_token] + self.tokenizer.tokenize(text) + [self.sep_token]
-		idx = self.numericalize(tokens)
-		return idx
+		return tokens
 
 
 	def process(self, batch, device):
-		padded, lengths = self.pad(batch)
+		idx = [self.numericalize(tokens) for tokens in batch]
+		padded, lengths = self.pad(idx)
 		tensor, lengths = self.to_tensor(padded, lengths, device)
 		bert_embeddings = self.bertify(tensor)
 		return bert_embeddings, lengths
@@ -207,12 +207,9 @@ class BertField(RawField):
 		padded, lengths = [], []
 		
 		for x in batch:
-			padded.append(
-				list(x[:max_len]) +
-				[self.pad_token] * max(0, max_len - len(x)))
-
+			padded.append(x + [self.pad_token] * max(0, max_len - len(x)))
 			lengths.append(len(padded[-1]) - max(0, max_len - len(x)))
-
+		
 		return (padded, lengths)
 
 

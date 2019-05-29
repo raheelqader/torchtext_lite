@@ -423,6 +423,8 @@ class TestAll(unittest.TestCase):
 
 	def test18(self):
 
+		""" test size of object in memorty """
+
 		import os
 		import psutil
 		process = psutil.Process(os.getpid())
@@ -447,11 +449,13 @@ class TestAll(unittest.TestCase):
 			for src_raw in src_raws:
 				print(src_raw)
 
-		# cal_time('nosort')
-		# print(convert_size(process.memory_info().rss))  # in bytes 
+		cal_time('nosort')
+		print(convert_size(process.memory_info().rss))  # in bytes 
 
 
 	def test19(self):
+
+		""" test loading testset by usning saved field of train set without loading trainingset """
 
 		# train_dataset = Dataset()
 		# train_dataset.load('e2e_dataset')
@@ -489,6 +493,7 @@ class TestAll(unittest.TestCase):
 
 
 	def test20(self):
+		""" test loading testset by usning vocab of train set without loading trainingset """
 
 		# src_field = TextField(add_sos=True, add_eos=True)
 		# trg_field = TextField()
@@ -527,6 +532,7 @@ class TestAll(unittest.TestCase):
 			print('last: src', src.size())
 
 	def test21(self):
+		""" test loading embedding """
 
 		src_field = TextField(add_sos=True, add_eos=True)
 		trg_field = TextField()
@@ -538,11 +544,12 @@ class TestAll(unittest.TestCase):
 
 		trg_field.vocab.load_embeddings('glove.6B.50d.txt')
 
-		print(trg_field.vocab.embeddings)
+		print(trg_field.vocab.embeddings.size())
 
 
 
 	def test22(self):
+		""" test bert field"""
 
 		device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -554,13 +561,13 @@ class TestAll(unittest.TestCase):
 		dataset = TextDataset((src_field, trg_field, src_raw_field), src_path, trg_path, src_max_length, trg_max_length)
 		trg_field.build_vocab(dataset.trg, vocab_size=50000)
 
-		bi = BucketIterator(dataset, batch_size=10, sort_key=lambda x: len(x.src), \
+		bi = BucketIterator(dataset, batch_size=4, sort_key=lambda x: len(x.src), \
 							sort=False, shuffle=False, repeat=False, sort_within_batch=False, num_buckets=1, device=device)
 
 		for batch in bi:
 
-			src = batch.src
-
+			src, _ = batch.src
+			print(src.size())
 			for src_seq in src:
 				print(src_seq)
 
@@ -568,4 +575,4 @@ class TestAll(unittest.TestCase):
 if __name__ == '__main__':
 	# unittest.main()
 	test = TestAll()
-	test.test22()
+	test.test21()
