@@ -267,7 +267,7 @@ class TextField(RawField):
 
 		return (padded, lengths)
 
-	def build_vocab(self, datasets, vocab_size=None, min_freq=1, load_path=None, save_path=None):
+	def build_vocab(self, datasets=None, vocab_size=None, min_freq=1, load_path=None, save_path=None):
 
 		reserved = []
 		if self.add_sos: reserved.append(SOS_token)
@@ -343,10 +343,10 @@ class Dataset():
 
 class Batch():
 
-	def __init__(self, data, dataset, device):
+	def __init__(self, data, fields, device):
 		self.data = data
 		self.batch_size = len(data)
-		self.fields = dataset.fields
+		self.fields = fields
 		self.device = device
 		self.prepare_batch()
 
@@ -395,11 +395,11 @@ class BucketIterator():
 		if self.sort:
 			self.dataset.sort(self.sort_key)
 
-		self.size = math.ceil(len(self.dataset) / self.num_buckets)
+		self.size = 1/self.num_buckets*len(self.dataset)
 		self.buckets = []
 
 		for bucket in range(self.num_buckets):
-			self.buckets.append(self.dataset[bucket*self.size: (bucket+1)*self.size])
+			self.buckets.append(self.dataset[int(round(bucket*self.size)):int(round((bucket+1)*self.size))])
 		
 		# cursor[i] will be the cursor for the ith bucket
 		self.cursor = np.array([0] * self.num_buckets)
@@ -423,16 +423,16 @@ class BucketIterator():
 				batch = self.buckets[i][self.cursor[i]:self.cursor[i]+self.batch_size]
 				self.cursor[i] += self.batch_size
 
-				yield Batch(batch, self.dataset, self.device)
+				yield Batch(batch, self.dataset.fields, self.device)
 		else:
 			batch = []
 			for item in chain(*self.buckets):
 				batch.append(item)
 				if len(batch) == self.batch_size:
-					yield Batch(batch, self.dataset, self.device)
+					yield Batch(batch, self.dataset.fields, self.device)
 					batch = []
 			if batch:
-				yield Batch(batch, self.dataset, self.device)
+				yield Batch(batch, self.dataset.fields, self.device)
 
 
 	def random_shuffler(self):

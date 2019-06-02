@@ -2,6 +2,7 @@ import unittest
 from torchtext_lite import *
 # import torchtext
 import sys
+import math
 
 
 src_path = './source.txt'
@@ -17,6 +18,17 @@ def cal_time(msg):
 	seconds_elapsed = current_time - last_time
 	print(msg, ' seconds_elapsed: ', seconds_elapsed)
 	last_time = time()
+
+
+
+def convert_size(size_bytes):
+	if size_bytes == 0:
+		 return "0B"
+	size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+	i = int(math.floor(math.log(size_bytes, 1024)))
+	p = math.pow(1024, i)
+	s = round(size_bytes / p, 2)
+	return "%s %s" % (s, size_name[i])
 
 
 def tokenizer(text):
@@ -410,16 +422,6 @@ class TestAll(unittest.TestCase):
 
 		cal_time('BucketIterator')
 
-	import math
-
-	def convert_size(size_bytes):
-		if size_bytes == 0:
-			 return "0B"
-		size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
-		i = int(math.floor(math.log(size_bytes, 1024)))
-		p = math.pow(1024, i)
-		s = round(size_bytes / p, 2)
-		return "%s %s" % (s, size_name[i])
 
 	def test18(self):
 
@@ -573,6 +575,6 @@ class TestAll(unittest.TestCase):
 
 
 if __name__ == '__main__':
-	# unittest.main()
-	test = TestAll()
-	test.test21()
+	unittest.main()
+	# test = TestAll()
+	# test.test21()
