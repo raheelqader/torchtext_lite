@@ -137,7 +137,7 @@ class RawField():
 			self.__dict__.update(pickle.load(fin).__dict__)
 
 
-class AudioField(RawField):
+class NumericField(RawField):
 
 	def process(self, batch, device):
 		padded, lengths = self.zero_pad(batch)
@@ -174,14 +174,12 @@ class AudioField(RawField):
 
 class BertField(RawField):
 	def __init__(self, device):
-		from pytorch_pretrained_bert import BertTokenizer, BertModel
+		from pytorch_pretrained_bert import BertTokenizer
 
 		self.pad_token = 0
 		self.cls_token = '[CLS]'
 		self.sep_token = '[SEP]'
 		self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-		self.bert_model = BertModel.from_pretrained('bert-base-uncased')
-		self.bert_model.to(device)
 
 
 	def preprocess(self, text):
@@ -193,8 +191,7 @@ class BertField(RawField):
 		idx = [self.numericalize(tokens) for tokens in batch]
 		padded, lengths = self.pad(idx)
 		tensor, lengths = self.to_tensor(padded, lengths, device)
-		bert_embeddings = self.bertify(tensor)
-		return bert_embeddings, lengths
+		return tensor, lengths
 
 
 	def numericalize(self, tokens):
@@ -219,11 +216,6 @@ class BertField(RawField):
 		tensor = tensor.contiguous()
 		return tensor, lengths
 
-
-	def bertify(self, tensor):
-		self.bert_model.eval()
-		encoded_layers, _ = self.bert_model(tensor)
-		return encoded_layers[-1]
 
 
 class TextField(RawField):
