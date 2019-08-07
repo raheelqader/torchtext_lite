@@ -52,7 +52,7 @@ class Vocab(object):
 
 		vocab_size = len(self)
 		
-		with open(file_name, 'r') as f:
+		with open(file_name, 'r', encoding='utf-8') as f:
 			for line in f:
 				
 				entries = line.rstrip().split(' ')
@@ -106,14 +106,14 @@ class Vocab(object):
 
 
 	def load(self, file_name):
-		with open(file_name, 'r') as fin:
+		with open(file_name, 'r', encoding='utf-8') as fin:
 			for line in fin:
 				line=line.strip()
 				word, freq = line.split('\t')
 				self.word2count[word] = int(freq)
 
 	def save(self, file_name):
-		with open(file_name, 'w') as fout:
+		with open(file_name, 'w', encoding='utf-8') as fout:
 
 			for word, freq in self.word2count.most_common():
 				fout.write('{}\t{}\n'.format(word, freq))
@@ -295,7 +295,11 @@ class Example():
 
 class Dataset():
 
-	def __init__(self, examples=None, fields=None):
+	def __init__(self, examples=None, fields=None, filter_pred=None):
+		
+		if filter_pred is not None:
+			examples = list(filter(filter_pred, examples))
+
 		if examples: self.examples = examples
 		if fields: self.fields = dict(fields)
 
