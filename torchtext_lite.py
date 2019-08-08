@@ -162,14 +162,6 @@ class NumericField(RawField):
 
 		return (padded, lengths)
 
-	def save(self, file_name):
-		with open(file_name, 'wb') as fout:
-			pickle.dump(self, fout)
-
-	def load(self, file_name):
-		with open(file_name, 'rb') as fin:
-			self.__dict__.update(pickle.load(fin).__dict__)
-
 
 
 class BertField(RawField):
