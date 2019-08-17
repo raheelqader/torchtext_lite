@@ -108,7 +108,6 @@ class Vocab(object):
 	def load(self, file_name):
 		with open(file_name, 'r', encoding='utf-8') as fin:
 			for line in fin:
-				line=line.strip()
 				word, freq = line.split('\t')
 				self.word2count[word] = int(freq)
 
